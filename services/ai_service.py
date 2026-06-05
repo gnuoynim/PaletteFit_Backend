@@ -1462,6 +1462,11 @@ def chat_stream(message: str, history: list, use_closet: bool, user_tone: dict |
 - 모르는 정보(옷장에 없는 옷 등)는 "옷장에 그 정보는 없어요" 라고 솔직히.
 - 불릿·번호·이모지 금지. 4~7줄.
 
+[환각 금지 — 절대 규칙]
+- 데이터로 주어지지 않은 정보(특히 날짜·시간·숫자·이름)는 절대 추측·창작 금지.
+- 사용자가 "언제 분석했어?" 처럼 시점을 물으면, [사용자 톤]의 analyzed_at 값이 있을 때만 그 값을 그대로 사용. 없으면 "정확한 분석 시점은 기록되어 있지 않아요" 라고 답.
+- "최근에", "며칠 전에" 같은 모호한 시간 표현도 데이터 근거 없으면 사용 금지.
+
 [좋은 답변 예시]
 Q: "내 옷장에서 가장 잘 받는 옷이 뭐야?"
 A: 지금 옷장에 8벌이 있고, 그중 잘 받는 색으로 분류된 옷은 라벤더 니트(86점)와 라이트 워싱 데님 팬츠(82점)예요. 둘 다 여름 쿨톤에 잘 어울리는 부드러운 색이라 점수가 높게 나왔어요. 더 자세히 보고 싶은 아이템이 있으면 옷장 페이지에서 확인하실 수 있어요.
@@ -1474,7 +1479,13 @@ A: 네, 잘 받는 편이에요. 라벤더는 당신의 베스트 컬러 중 하
 - "출근에는 X 입고 데이트에는 Y 입으세요" (시나리오 추천 — 금지)"""
 
     if user_tone:
-        system_prompt += f"\n\n[사용자 톤]\n시즌: {user_tone.get('season', '알 수 없음')}\n어울리는 색상: {', '.join(_palette_names(user_tone.get('bestColors', [])))}"
+        tone_lines = [
+            f"시즌: {user_tone.get('season', '알 수 없음')}",
+            f"어울리는 색상: {', '.join(_palette_names(user_tone.get('bestColors', [])))}",
+        ]
+        if user_tone.get("analyzed_at"):
+            tone_lines.append(f"analyzed_at: {user_tone['analyzed_at']}")
+        system_prompt += "\n\n[사용자 톤]\n" + "\n".join(tone_lines)
 
     if last_item_context:
         system_prompt += f"\n\n[방금 분석한 옷 — 우선 활용]\n{last_item_context}"

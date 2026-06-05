@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -38,12 +39,18 @@ def get_user_tone(session_id: str) -> dict | None:
         return None
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+        # 기존 데이터에 analyzed_at이 없으면 파일 mtime으로 보강 (legacy fallback)
+        if "analyzed_at" not in data:
+            data["analyzed_at"] = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat()
+        return data
     except (json.JSONDecodeError, IOError):
         return None
 
 
 def save_user_tone(session_id: str, data: dict) -> None:
+    # 분석 시점 timestamp 자동 기록 — LLM 환각 방지
+    data["analyzed_at"] = datetime.now(timezone.utc).isoformat()
     with open(_tone_path(session_id), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
